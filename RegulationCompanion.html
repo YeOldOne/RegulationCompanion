@@ -1,0 +1,942 @@
+<!-- 
+  Watch regulation companion, a helper for mechanical watch regulation, with optional recommendations, recommendations and all actions in general based on the values in this software are for the users own risk.
+  Copyright (C) 2024 - 2025  YeOldOne
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<!-- 
+  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW. 
+  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM IS WITH YOU.
+  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+-->
+<!-- 
+  IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR CONVEYS THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Watch regulation companion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Watch regulation companion">
+    <meta charset="UTF-8"> 
+    <meta name="author" content="YeOldOne"> 
+    <meta name="generator" content="Notepad, fingers and brain">
+    <meta name="robots" content="index, nofollow">
+    <style>
+      :root {
+        /* regulation constants */
+        --rate-ok-min: 0;                                  /* negative rates are not prefered */
+        --rate-ok-max: 7;
+        --rate-acceptable-min: -15;
+        --rate-acceptable-max: 15;
+        --amplitude-ok-min: 270;     
+        --amplitude-ok-max: 320;
+        --amplitude-acceptable-min: 180;
+        --amplitude-acceptable-max: 340;
+        --beaterror-ok-min: -0.3;
+        --beaterror-ok-max: 0.3;
+        --beaterror-acceptable-min: -1;
+        --beaterror-acceptable-max: 1;
+        --deltarate-ok-min: 0;
+        --deltarate-ok-max: 5;
+        --deltarate-acceptable-min: -10;
+        --deltarate-acceptable-max: 15;
+        --deltaamplitude-ok-min: -15;
+        --deltaamplitude-ok-max: 15;
+        --deltaamplitude-acceptable-min: -30;
+        --deltaamplitude-acceptable-max: 30;
+        --deltabeaterror-ok-min: -0.1;
+        --deltabeaterror-ok-max: 0.1;
+        --deltabeaterror-acceptable-min: -0.2;
+        --deltabeaterror-acceptable-max: 0.2;
+        /* recommendation constants */
+        --crownleft-verticaladjustment-offset-perc: 0.3;   /* only recommend when the crown left rate deviates more than 30% from the other vertical rates */
+        --crownleft-verticaladjustment-offset-absolute: 5; /* only recommend when the absolute difference between the crown left rate and the other vertical rates is more than 5 sec/day /*
+        /* color constants */
+        --bench-mat-color: #95C890;
+        --content-background-color: color-mix(in srgb, var(--bench-mat-color), white 70%);
+        --input-background-color: color-mix(in srgb, var(--bench-mat-color), white 90%);
+        --input-disabled-background-color: color-mix(in srgb, var(--bench-mat-color), white 64%);
+        --content-border-color: color-mix(in srgb, var(--bench-mat-color), black 10%);
+        --input-border-color: color-mix(in srgb, var(--bench-mat-color), white 10%);
+        --shadow-color: color-mix(in srgb, var(--bench-mat-color), black 30%);
+        --font-color: black;
+        --link-color: color-mix(in srgb, var(--font-color), white 30%);
+        --switch-on-color: var(--bench-mat-color);
+        --switch-off-color: #CCCCCC;
+        --value-ok-color: #93E87D;
+        --value-acceptable-start-color: #E8E800;
+        --value-acceptable-end-color: #E39400;
+        --value-not-ok-color: #ED1823;
+      } 
+
+      body {
+        background-color: var(--bench-mat-color);
+        font-family: "Calibri", sans-serif;
+        font-size: 16px;
+        color: var(--font-color);
+      }
+
+      a {
+        color: var(--link-color);
+      }
+
+      th {
+        text-align: left;
+        font-weight: bold;
+      }
+
+      input { 
+        text-align: right; 
+        width: 4.4rem;
+        -webkit-appearance: none;
+        outline: 0.125rem solid var(--input-background-color);
+        outline-offset: -0.25rem; 
+        border: 0.125rem solid var(--input-background-color); 
+        border-radius: 0.3125rem;
+        background-color: var(--input-background-color);
+        filter: drop-shadow(var(--input-border-color) -0.1rem -0.1rem 0.07rem);
+      }
+
+      input:focus { 
+        border-color: var(--content-border-color);
+      }
+
+      input:disabled {
+        background-color: var(--input-disabled-background-color);
+        outline: 0.125rem solid var(--input-disabled-background-color);
+        border: 0.125rem solid var(--input-disabled-background-color); 
+      } 
+
+      .copyright {
+        position: absolute;
+        bottom: 0.1875rem;
+        right: 0.375rem;    
+        font-weight: bold;
+        font-size: smaller; 
+      } 
+
+      .flexcenteredcontent {
+        width: 100%;
+        display: flex;
+        justify-content: center;    
+      }
+
+      .contentblock {
+        border: 0.125rem solid var(--content-border-color);
+        margin-top: 1rem; 
+        padding: 2rem; 
+        background-color: var(--content-background-color);
+        filter: drop-shadow(var(--shadow-color) 0.1875rem 0.1875rem 0.25rem);
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr 0.5fr;
+        column-gap: 5%;
+        row-gap: 5%;
+      }
+
+      @media only screen and (max-height: 40rem) {
+        .contentblock {
+          grid-template-columns: 1fr 1fr; 
+          grid-template-rows: 1fr 1fr;
+        }
+      } 
+
+      .responsiveblock {
+        display: inline-block;
+        white-space: nowrap;      
+      }
+
+      .tableheadercenter {
+        text-align: center;
+      }
+
+      .switch {
+        display: inline-block;
+        height: 1.4875rem;
+        position: relative;
+        width: 2.625rem;
+        margin-right: 0.25rem;
+      }
+
+      .switch input {
+        display:none;
+      }
+
+      .slider {
+        background-color: var(--switch-off-color);
+        bottom: 0;
+        cursor: pointer;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+        transition: .4s;
+      }
+
+      .slider:before {
+        background-color: var(--input-background-color);
+        bottom: 0.175rem;
+        content: "";
+        height: 1.1375rem;
+        left: 0.175rem;
+        position: absolute;
+        transition: .4s;
+        width: 1.1375rem;
+      }
+
+      input:checked + .slider {
+        background-color: var(--switch-on-color);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(1.1375rem);
+      }
+
+      .slider.round {
+        border-radius: 1.4875rem;
+      }
+
+      .slider.round:before {
+        border-radius: 50%;
+      }
+
+      .optionline {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .option {
+        display: inline-block;
+      }
+
+      .optiontext {
+        display: inline-block;
+        vertical-align: top;
+        height: 1.4875rem; 
+        padding-top: 0.125rem; 
+      }
+    </style>
+    <script> 
+      function setCopyrightYears(divId, startYear) {
+        let yearRange = startYear;
+        let currentYear = new Date().getFullYear();
+        if (currentYear > startYear) {
+          yearRange = yearRange + '&nbsp;-&nbsp;' + currentYear;
+        }
+        document.getElementById(divId).innerHTML = yearRange;
+      }
+
+      function addListeners() {
+        document.getElementById("ddrate").addEventListener("change", input2DecChanged);
+        document.getElementById("durate").addEventListener("change", input2DecChanged);
+        document.getElementById("clrate").addEventListener("change", input2DecChanged);
+        document.getElementById("cdrate").addEventListener("change", input2DecChanged);
+        document.getElementById("curate").addEventListener("change", input2DecChanged);
+        document.getElementById("ddamplitude").addEventListener("change", inputChanged);
+        document.getElementById("duamplitude").addEventListener("change", inputChanged);
+        document.getElementById("clamplitude").addEventListener("change", inputChanged);
+        document.getElementById("cdamplitude").addEventListener("change", inputChanged);
+        document.getElementById("cuamplitude").addEventListener("change", inputChanged);
+        document.getElementById("ddbeaterror").addEventListener("change", input2DecChanged);
+        document.getElementById("dubeaterror").addEventListener("change", input2DecChanged);
+        document.getElementById("clbeaterror").addEventListener("change", input2DecChanged);
+        document.getElementById("cdbeaterror").addEventListener("change", input2DecChanged);
+        document.getElementById("cubeaterror").addEventListener("change", input2DecChanged);
+        document.getElementById("optioncolorassist").addEventListener("change", inputChanged);
+        document.getElementById("optioncoloramplitude").addEventListener("change", inputChanged);
+        document.getElementById("optionpositions").addEventListener("change", inputChanged);
+        document.getElementById("optionrecommendations").addEventListener("change", inputChanged);
+      }
+
+      function toHex2(value) {
+        let hexValue = value.toString(16);
+        if (hexValue.length == 1) {
+          hexValue = "0" + hexValue;
+        }
+        return hexValue;
+      }
+
+      function colorMixChannel(value1, value2, factor) {
+        let offset = (value2 - value1) * factor;
+        return Math.round(value1 + offset);
+      }
+
+      function colorMix(color1, color2, factor) {
+        const r = colorMixChannel(parseInt(color1.slice(1, 3), 16), parseInt(color2.slice(1, 3), 16), factor);
+        const g = colorMixChannel(parseInt(color1.slice(3, 5), 16), parseInt(color2.slice(3, 5), 16), factor);
+        const b = colorMixChannel(parseInt(color1.slice(5, 7), 16), parseInt(color2.slice(5, 7), 16), factor);
+        return "#" + toHex2(r) + toHex2(g) + toHex2(b);
+      }
+
+      function unmarkInput(inputName) {
+        const input = document.getElementById(inputName);
+        if (!input) {
+          return;
+        }
+        const styleRoot = document.styleSheets[0].cssRules[0].style;
+        input.style.outlineColor = styleRoot.getPropertyValue('--input-background-color');
+      }
+
+      function markInput(inputName, value, okMin, okMax, acceptableMin, acceptableMax) {
+        const input = document.getElementById(inputName);
+        if (!input) {
+          return;
+        }
+        const styleRoot = document.styleSheets[0].cssRules[0].style;
+        let color = 0;
+        if ((value >= okMin) && (value <= okMax)) {
+          color = styleRoot.getPropertyValue('--value-ok-color');
+        } else {
+          if ((value >= acceptableMin) && (value <= acceptableMax)) { 
+            let factor = 0;
+            if (value < okMin) {
+              factor = (value - okMin) / (acceptableMin - okMin)
+            } else {
+              factor = (value - okMax) / (acceptableMax - okMax)
+            }
+            color = colorMix(styleRoot.getPropertyValue('--value-acceptable-start-color'), styleRoot.getPropertyValue('--value-acceptable-end-color'), factor)
+          } else {
+            color = styleRoot.getPropertyValue('--value-not-ok-color');
+          }
+        }
+        input.style.outlineColor = color; 
+      }
+
+      function isSwitchOn(inputName) {
+        const input = document.getElementById(inputName);
+        if (!input) {
+          return false;
+        }
+        return input.checked;
+      } 
+
+      function isColorAssistOn() {
+        return isSwitchOn("optioncolorassist");
+      }
+
+      function isColorAmplitudeOn() {
+        return isSwitchOn("optioncoloramplitude");
+      }
+
+      function isAllPositionsOn() {
+        return isSwitchOn("optionpositions");
+      }
+
+      function isRecommendationsOn() {
+        return isSwitchOn("optionrecommendations");
+      }
+
+      function isInputValid(inputName) {
+        const input = document.getElementById(inputName);
+        if (!input) {
+          return false;
+        }
+        const value = input.value;
+        if ((value == null) || (value == "")) {
+          return false;
+        } 
+        if (value.trim().length == 0) { 
+          return false;
+        }
+        if ((isNaN(value)) || (isNaN(parseFloat(value)))) {
+          return false;
+        } 
+        return true;
+      }
+
+      function inputValue(inputName) {
+        const input = document.getElementById(inputName);
+        if (!input) {
+          return NaN;
+        }
+        return parseFloat(input.value);
+      }
+
+      function colorMarkRate(inputName) {
+        if ((isInputValid(inputName)) && (isColorAssistOn())) {
+          const styleRoot = document.styleSheets[0].cssRules[0].style;
+          markInput(inputName, inputValue(inputName), styleRoot.getPropertyValue('--rate-ok-min'), styleRoot.getPropertyValue('--rate-ok-max'), styleRoot.getPropertyValue('--rate-acceptable-min'), styleRoot.getPropertyValue('--rate-acceptable-max'));
+        } else {
+          unmarkInput(inputName);
+        }
+      }
+
+      function colorMarkAmplitude(inputName) {
+        if ((isInputValid(inputName)) && (isColorAssistOn()) && (isColorAmplitudeOn())) {
+          const styleRoot = document.styleSheets[0].cssRules[0].style;
+          markInput(inputName, inputValue(inputName), styleRoot.getPropertyValue('--amplitude-ok-min'), styleRoot.getPropertyValue('--amplitude-ok-max'), styleRoot.getPropertyValue('--amplitude-acceptable-min'), styleRoot.getPropertyValue('--amplitude-acceptable-max'));
+        } else {
+          unmarkInput(inputName);
+        }
+      }
+
+      function colorMarkBeatError(inputName) {
+        if ((isInputValid(inputName)) && (isColorAssistOn())) {
+          const styleRoot = document.styleSheets[0].cssRules[0].style;
+          markInput(inputName, inputValue(inputName), styleRoot.getPropertyValue('--beaterror-ok-min'), styleRoot.getPropertyValue('--beaterror-ok-max'), styleRoot.getPropertyValue('--beaterror-acceptable-min'), styleRoot.getPropertyValue('--beaterror-acceptable-max'));
+        } else {
+          unmarkInput(inputName);
+        }
+      }
+
+      function colorMarkDeltaRate(inputName) {
+        if ((isInputValid(inputName)) && (isColorAssistOn())) {
+          const styleRoot = document.styleSheets[0].cssRules[0].style;
+          markInput(inputName, inputValue(inputName), styleRoot.getPropertyValue('--deltarate-ok-min'), styleRoot.getPropertyValue('--deltarate-ok-max'), styleRoot.getPropertyValue('--deltarate-acceptable-min'), styleRoot.getPropertyValue('--deltarate-acceptable-max'));
+        } else {
+          unmarkInput(inputName);
+        }
+      }
+
+      function colorMarkDeltaAmplitude(inputName) {
+        if ((isInputValid(inputName)) && (isColorAssistOn()) && (isColorAmplitudeOn())) {
+          const styleRoot = document.styleSheets[0].cssRules[0].style;
+          markInput(inputName, inputValue(inputName), styleRoot.getPropertyValue('--deltaamplitude-ok-min'), styleRoot.getPropertyValue('--deltaamplitude-ok-max'), styleRoot.getPropertyValue('--deltaamplitude-acceptable-min'), styleRoot.getPropertyValue('--deltaamplitude-acceptable-max'));
+        } else {
+          unmarkInput(inputName);
+        }
+      }
+
+      function colorMarkDeltaBeatError(inputName) {
+        if ((isInputValid(inputName)) && (isColorAssistOn())) {
+          const styleRoot = document.styleSheets[0].cssRules[0].style;
+          markInput(inputName, inputValue(inputName), styleRoot.getPropertyValue('--deltabeaterror-ok-min'), styleRoot.getPropertyValue('--deltabeaterror-ok-max'), styleRoot.getPropertyValue('--deltabeaterror-acceptable-min'), styleRoot.getPropertyValue('--deltabeaterror-acceptable-max'));
+        } else {
+          unmarkInput(inputName);
+        }
+      }
+
+      function colorMarkInputs() {
+        colorMarkRate("ddrate"); 
+        colorMarkRate("durate"); 
+        colorMarkRate("clrate"); 
+        colorMarkRate("cdrate"); 
+        colorMarkRate("curate"); 
+        colorMarkAmplitude("ddamplitude");  
+        colorMarkAmplitude("duamplitude");  
+        colorMarkAmplitude("clamplitude");  
+        colorMarkAmplitude("cdamplitude");  
+        colorMarkAmplitude("cuamplitude");  
+        colorMarkBeatError("ddbeaterror");
+        colorMarkBeatError("dubeaterror");
+        colorMarkBeatError("clbeaterror");
+        colorMarkBeatError("cdbeaterror");
+        colorMarkBeatError("cubeaterror");
+        colorMarkDeltaRate("deltarate");
+        colorMarkDeltaRate("deltahorizontalrate");
+        colorMarkDeltaRate("deltaverticalrate");
+        colorMarkRate("meanrate"); 
+        colorMarkDeltaAmplitude("deltaamplitude");
+        colorMarkDeltaAmplitude("deltahorizontalamplitude");
+        colorMarkDeltaAmplitude("deltaverticalamplitude");
+        colorMarkAmplitude("meanamplitude");  
+        colorMarkDeltaBeatError("deltabeaterror");
+        colorMarkDeltaBeatError("deltahorizontalbeaterror");
+        colorMarkDeltaBeatError("deltaverticalbeaterror");
+        colorMarkBeatError("meanbeaterror");
+      }
+
+      function setVisible(elementName, visible) {
+        const element = document.getElementById(elementName);
+        if (element) {
+          if (visible) {
+            element.style.display = "inline-block";
+          } else {
+            element.style.display = "none";
+          }
+        }
+      }
+
+      function processOptions() {
+        setVisible("optioncoloramplitudeoption", isColorAssistOn());
+        setVisible("recommendations", isRecommendationsOn());
+      }
+
+      function processPositions() {
+        let rowDisplay = "";
+        if (!isAllPositionsOn()) {
+          rowDisplay = "none";
+        }
+        document.getElementById("dialdownrow").style.display = rowDisplay;
+        document.getElementById("crownuprow").style.display = rowDisplay;
+        document.getElementById("deltahorizontalrow").style.display = rowDisplay;
+      }
+
+      function calculateDelta(values) {
+        let minValue = Number.MAX_VALUE;
+        let maxValue = -Number.MAX_VALUE;
+        for (let valueCounter = 0; valueCounter < values.length; valueCounter++) {
+          if (values[valueCounter] < minValue) {
+            minValue = values[valueCounter];
+          } 
+          if (values[valueCounter] > maxValue) {
+            maxValue = values[valueCounter];
+          } 
+        }  
+        return maxValue - minValue;
+      }
+
+      function calculateDeltaFromInputs(inputNames, outputName, twoDecimals)
+      {
+        const output = document.getElementById(outputName);
+        output.value = "";
+        let inputValues = [];
+        for (let inputsCounter = 0; inputsCounter < inputNames.length; inputsCounter++) {
+          if (!isInputValid(inputNames[inputsCounter])) {
+            return;
+          }
+          inputValues.push(parseFloat(inputValue(inputNames[inputsCounter])));
+        }
+        if (twoDecimals) {
+          output.value = calculateDelta(inputValues).toFixed(2); 
+        } else {
+          output.value = calculateDelta(inputValues); 
+        }
+      }
+
+      function calculateDeltas() {
+        if (isAllPositionsOn()) {
+          calculateDeltaFromInputs(["ddrate", "durate", "clrate", "cdrate", "curate"], "deltarate", true); 
+          calculateDeltaFromInputs(["ddamplitude", "duamplitude", "clamplitude", "cdamplitude", "cuamplitude"], "deltaamplitude", false); 
+          calculateDeltaFromInputs(["ddbeaterror", "dubeaterror", "clbeaterror", "cdbeaterror", "cubeaterror"], "deltabeaterror", true); 
+          calculateDeltaFromInputs(["ddrate", "durate"], "deltahorizontalrate", true); 
+          calculateDeltaFromInputs(["ddamplitude", "duamplitude"], "deltahorizontalamplitude", false); 
+          calculateDeltaFromInputs(["ddbeaterror", "dubeaterror"], "deltahorizontalbeaterror", true); 
+          calculateDeltaFromInputs(["clrate", "cdrate", "curate"], "deltaverticalrate", true); 
+          calculateDeltaFromInputs(["clamplitude", "cdamplitude", "cuamplitude"], "deltaverticalamplitude", false); 
+          calculateDeltaFromInputs(["clbeaterror", "cdbeaterror", "cubeaterror"], "deltaverticalbeaterror", true); 
+        } else {
+          calculateDeltaFromInputs(["durate", "clrate", "cdrate"], "deltarate", true); 
+          calculateDeltaFromInputs(["duamplitude", "clamplitude", "cdamplitude"], "deltaamplitude", false); 
+          calculateDeltaFromInputs(["dubeaterror", "clbeaterror", "cdbeaterror"], "deltabeaterror", true); 
+          calculateDeltaFromInputs(["clrate", "cdrate"], "deltaverticalrate", true); 
+          calculateDeltaFromInputs(["clamplitude", "cdamplitude"], "deltaverticalamplitude", false); 
+          calculateDeltaFromInputs(["clbeaterror", "cdbeaterror"], "deltaverticalbeaterror", true); 
+        }
+      }
+
+      function calculateMean(values) {
+        let total = 0;
+        for (let valueCounter = 0; valueCounter < values.length; valueCounter++) {
+          total = total + values[valueCounter];
+        }
+        return total / values.length;
+      }
+
+      function calculateMeanFromInputs(inputNames, outputName, twoDecimals)
+      {
+        const output = document.getElementById(outputName);
+        output.value = "";
+        let inputValues = [];
+        for (let inputsCounter = 0; inputsCounter < inputNames.length; inputsCounter++) {
+          if (!isInputValid(inputNames[inputsCounter])) {
+            return;
+          }
+          inputValues.push(parseFloat(inputValue(inputNames[inputsCounter])));
+        }
+        if (twoDecimals) {
+          output.value = calculateMean(inputValues).toFixed(2); 
+        } else {
+          output.value = calculateMean(inputValues); 
+        }
+      }
+
+      function calculateMeans() {
+        if (isAllPositionsOn()) {
+          calculateMeanFromInputs(["ddrate", "durate", "clrate", "cdrate", "curate"], "meanrate", true); 
+          calculateMeanFromInputs(["ddamplitude", "duamplitude", "clamplitude", "cdamplitude", "cuamplitude"], "meanamplitude", false); 
+          calculateMeanFromInputs(["ddbeaterror", "dubeaterror", "clbeaterror", "cdbeaterror", "cubeaterror"], "meanbeaterror", true); 
+        } else {
+          calculateMeanFromInputs(["durate", "clrate", "cdrate"], "meanrate", true); 
+          calculateMeanFromInputs(["duamplitude", "clamplitude", "cdamplitude"], "meanamplitude", false); 
+          calculateMeanFromInputs(["dubeaterror", "clbeaterror", "cdbeaterror"], "meanbeaterror", true); 
+        }
+      }
+
+      function getLowest(values) {
+        if (values.length <= 0) {
+          return NaN;
+        }
+        let lowestValue = values[0];
+        for (let valueCounter = 1; valueCounter < values.length; valueCounter++) {
+          if (values[valueCounter] < lowestValue) {
+            lowestValue = values[valueCounter];
+          } 
+        }
+        return lowestValue;
+      }
+
+      function getHighest(values) {
+        if (values.length <= 0) {
+          return NaN;
+        }
+        let highestValue = values[0];
+        for (let valueCounter = 1; valueCounter < values.length; valueCounter++) {
+          if (values[valueCounter] > highestValue) {
+            highestValue = values[valueCounter];
+          } 
+        }
+        return highestValue;
+      }
+
+      function crownLeftNegativeOffsetPerc(minimumOffset) {
+        let maxVertRate = 0;
+        if (!isInputValid("clrate")) {
+          return NaN;
+        }
+        const crownleftrate = inputValue("clrate");
+        if (isAllPositionsOn()) {
+          if ((!isInputValid("cdrate")) || (!isInputValid("curate"))) {
+            return NaN;
+          }
+          maxVertRate = getHighest([inputValue("cdrate"), inputValue("curate")]);
+        } else {
+          if (!isInputValid("cdrate")) {
+            return NaN;
+          }
+          maxVertRate = inputValue("cdrate");
+        }
+        if (maxVertRate <= crownleftrate) {
+          return 0;
+        }
+        if (Math.abs(crownleftrate - maxVertRate) <= Math.abs(minimumOffset)) {
+          return 0;
+        }
+        return Math.abs((crownleftrate - maxVertRate) / maxVertRate);
+      }
+
+      function crownLeftPositiveOffsetPerc(minimumOffset) {
+        let minVertRate = 0;
+        if (!isInputValid("clrate")) {
+          return NaN;
+        }
+        const crownleftrate = inputValue("clrate");
+        if (isAllPositionsOn()) {
+          if ((!isInputValid("cdrate")) || (!isInputValid("curate"))) {
+            return NaN;
+          }
+          minVertRate = getLowest([inputValue("cdrate"), inputValue("curate")]);
+        } else {
+          if (!isInputValid("cdrate")) {
+            return NaN;
+          }
+          minVertRate = inputValue("cdrate");
+        }
+        if (minVertRate >= crownleftrate) {
+          return 0;
+        }
+        if (Math.abs(crownleftrate - minVertRate) <= Math.abs(minimumOffset)) {
+          return 0;
+        }
+        return Math.abs((crownleftrate - minVertRate) / minVertRate);
+      }
+
+      function verticalRatesHaveANegativeOffset() {
+        let lowestHorizontalRate = 0;
+        let highestVerticalRate = 0;
+        if (isAllPositionsOn()) {
+          if ((!isInputValid("ddrate")) || (!isInputValid("durate")) || (!isInputValid("clrate")) || (!isInputValid("cdrate")) || (!isInputValid("curate"))) {
+            return false;
+          }
+          lowestHorizontalRate = getLowest([inputValue("ddrate"), inputValue("durate")]);
+          highestVerticalRate = getHighest([inputValue("clrate"), inputValue("cdrate"), inputValue("curate")]);
+        } else {
+          if ((!isInputValid("durate")) || (!isInputValid("clrate")) || (!isInputValid("cdrate"))) {
+            return false;
+          }
+          lowestHorizontalRate = inputValue("durate");
+          highestVerticalRate = getHighest([inputValue("clrate"), inputValue("cdrate")]);
+        }
+        return (highestVerticalRate < lowestHorizontalRate);
+      }
+
+      function verticalRatesHaveAPositiveOffset() {
+        let highestHorizontalRate = 0;
+        let lowestVerticalRate = 0;
+        if (isAllPositionsOn()) {
+          if ((!isInputValid("ddrate")) || (!isInputValid("durate")) || (!isInputValid("clrate")) || (!isInputValid("cdrate")) || (!isInputValid("curate"))) {
+            return false;
+          }
+          highestHorizontalRate = getHighest([inputValue("ddrate"), inputValue("durate")]);
+          lowestVerticalRate = getLowest([inputValue("clrate"), inputValue("cdrate"), inputValue("curate")]);
+        } else {
+          if ((!isInputValid("durate")) || (!isInputValid("clrate")) || (!isInputValid("cdrate"))) {
+            return false;
+          }
+          highestHorizontalRate = inputValue("durate");
+          lowestVerticalRate = getLowest([inputValue("clrate"), inputValue("cdrate")]);
+        }
+        return (highestHorizontalRate < lowestVerticalRate);
+      }
+
+      function getLowestRate() {
+        let lowestRate = 0;
+        if (isAllPositionsOn()) {
+          if ((!isInputValid("ddrate")) || (!isInputValid("durate")) || (!isInputValid("clrate")) || (!isInputValid("cdrate")) || (!isInputValid("curate"))) {
+            return NaN;
+          }
+          lowestRate = getLowest([inputValue("ddrate"), inputValue("durate"), inputValue("clrate"), inputValue("cdrate"), inputValue("curate")]);
+        } else {
+          if ((!isInputValid("durate")) || (!isInputValid("clrate")) || (!isInputValid("cdrate"))) {
+            return NaN;
+          }
+          lowestRate = getLowest([inputValue("durate"), inputValue("clrate"), inputValue("cdrate")]);
+        }
+        return lowestRate;
+      }
+
+      function getAverageRate() {
+        if (!isInputValid("meanrate")) {
+          return NaN;
+        }
+        return inputValue("meanrate");
+      }
+
+      function getLowestBeatError() {
+        let lowestBeatError = 0;
+        if (isAllPositionsOn()) {
+          if ((!isInputValid("ddbeaterror")) || (!isInputValid("dubeaterror")) || (!isInputValid("clbeaterror")) || (!isInputValid("cdbeaterror")) || (!isInputValid("cubeaterror"))) {
+            return NaN;
+          }
+          lowestBeatError = getLowest([inputValue("ddbeaterror"), inputValue("dubeaterror"), inputValue("clbeaterror"), inputValue("cdbeaterror"), inputValue("cubeaterror")]);
+        } else {
+          if ((!isInputValid("dubeaterror")) || (!isInputValid("clbeaterror")) || (!isInputValid("cdbeaterror"))) {
+            return NaN;
+          }
+          lowestBeatError = getLowest([inputValue("dubeaterror"), inputValue("clbeaterror"), inputValue("cdbeaterror")]);
+        }
+        return lowestBeatError;
+      }
+
+      function getHighestBeatError() {
+        let highestBeatError = 0;
+        if (isAllPositionsOn()) {
+          if ((!isInputValid("ddbeaterror")) || (!isInputValid("dubeaterror")) || (!isInputValid("clbeaterror")) || (!isInputValid("cdbeaterror")) || (!isInputValid("cubeaterror"))) {
+            return NaN;
+          }
+          highestBeatError = getHighest([inputValue("ddbeaterror"), inputValue("dubeaterror"), inputValue("clbeaterror"), inputValue("cdbeaterror"), inputValue("cubeaterror")]);
+        } else {
+          if ((!isInputValid("dubeaterror")) || (!isInputValid("clbeaterror")) || (!isInputValid("cdbeaterror"))) {
+            return NaN;
+          }
+          highestBeatError = getHighest([inputValue("dubeaterror"), inputValue("clbeaterror"), inputValue("cdbeaterror")]);
+        }
+        return highestBeatError;
+      }
+
+      function generateRecommendations() {
+        const styleRoot = document.styleSheets[0].cssRules[0].style;
+        let recommendationslines = document.getElementById("recommendationslines");
+        let newRecommendations = "";
+        if (isRecommendationsOn()) {
+          /* the crown left position can be adjusted by adjusting the vertical position of the hairspring stud, only when the crown left position doesn't match the other vertical positions */ 
+          if (crownLeftNegativeOffsetPerc(styleRoot.getPropertyValue('--crownleft-verticaladjustment-offset-absolute')) >= styleRoot.getPropertyValue('--crownleft-verticaladjustment-offset-perc')) {
+            newRecommendations = newRecommendations + "<li>Move the hairspring stud up to increase the crown left rate, without letting the hairspring go out of flat.</li>";
+          }
+          if (crownLeftPositiveOffsetPerc(styleRoot.getPropertyValue('--crownleft-verticaladjustment-offset-absolute')) >= styleRoot.getPropertyValue('--crownleft-verticaladjustment-offset-perc')) {
+            newRecommendations = newRecommendations + "<li>Move the hairspring stud down to decrease the crown left rate, without letting the hairspring go out of flat.</li>";
+          }
+          /* when the horizonal and vertical rates don't overlap, the horizontal and vertical rate can be adjusted relative to each other by adjusting the spacing of the regulator pins */ 
+          if (verticalRatesHaveANegativeOffset()) {
+            newRecommendations = newRecommendations + "<li>Bring the regulator pins closer together to increase the vertical rates relative to the horizontal rates.</li>";
+          }
+          if (verticalRatesHaveAPositiveOffset()) {
+            newRecommendations = newRecommendations + "<li>Increase the spacing of the regulator pins to decrease the vertical rates relative to the horizontal rates.</li>";
+          }
+          /* adjust the rate when the lowest rate is out of the "--rate-ok-min".."--rate-ok-max" range */ 
+          const lowestRate = getLowestRate();
+          if (lowestRate < styleRoot.getPropertyValue('--rate-ok-min')) {
+            newRecommendations = newRecommendations + "<li>Increase the rate of the movement to adjust the lowest rate.</li>";
+          }
+          if (lowestRate > styleRoot.getPropertyValue('--rate-ok-max')) {
+            newRecommendations = newRecommendations + "<li>Decrease the rate of the movement to adjust the lowest rate.</li>";
+          }
+          /* adjust the rate when the average rate is out of the "--rate-ok-min".."--rate-ok-max" range */ 
+          const averageRate = getAverageRate();
+          if (averageRate < styleRoot.getPropertyValue('--rate-ok-min')) {
+            newRecommendations = newRecommendations + "<li>Increase the rate of the movement to adjust the average rate.</li>";
+          }
+          if (averageRate > styleRoot.getPropertyValue('--rate-ok-max')) {
+            newRecommendations = newRecommendations + "<li>Decrease the rate of the movement to adjust the average rate.</li>";
+          }
+          /* adjust the beat error when the lowest beat error is out of the "--rate-ok-min".."--rate-ok-max" range */ 
+          const lowestBeatError = getLowestBeatError();
+          if (lowestBeatError < styleRoot.getPropertyValue('--beaterror-ok-min')) {
+            newRecommendations = newRecommendations + "<li>Increase the beat error of the movement to adjust the lowest beat error.</li>";
+          }
+          if (lowestBeatError > styleRoot.getPropertyValue('--beaterror-ok-max')) {
+            newRecommendations = newRecommendations + "<li>Decrease the beat error of the movement to adjust the lowest beat error.</li>";
+          }
+          /* adjust the beat error when the highest beat error is out of the "--rate-ok-min".."--rate-ok-max" range */ 
+          const highestBeatError = getHighestBeatError();
+          if (highestBeatError < styleRoot.getPropertyValue('--beaterror-ok-min')) {
+            newRecommendations = newRecommendations + "<li>Increase the beat error of the movement to adjust the highest beat error.</li>";
+          }
+          if (highestBeatError > styleRoot.getPropertyValue('--beaterror-ok-max')) {
+            newRecommendations = newRecommendations + "<li>Decrease the beat error of the movement to adjust the highest beat error.</li>";
+          }
+        }
+        if (newRecommendations != "") {
+          newRecommendations = "<ul>" + newRecommendations + "</ul>";
+        }
+        recommendationslines.innerHTML = newRecommendations;
+      }
+
+      function inputChanged(event) {
+        processPositions();  
+        calculateDeltas(); 
+        calculateMeans();
+        colorMarkInputs();
+        generateRecommendations();
+        processOptions();  
+      }
+
+      function input2DecChanged(event) {
+        event.target.value = parseFloat(event.target.value).toFixed(2);
+        inputChanged(event);
+      }
+    </script>  
+  </head>
+  <body>
+    <div class="flexcenteredcontent">
+      <div class="contentblock">
+        <div class="responsiveblock">  
+          <table>
+            <tr>
+              <th class="tableheadercenter" style="width: 5.6rem"></th>
+              <th class="tableheadercenter" title="Rate in seconds per day">Rate</th>
+              <th class="tableheadercenter" title="Amplitude in degrees10:02 25-08-24">Amplitude</th>
+              <th class="tableheadercenter" title="Beat error in milliseconds">BE</th>
+            </tr>
+            <tr id="dialdownrow">
+              <th>Dial&nbsp;Down&nbsp;</th>
+              <td><input type="number" id="ddrate" placeholder="sec/day" step='0.01' min="-1000" max="1000"></td>
+              <td><input type="number" id="ddamplitude" placeholder="&deg;" min="1" max="360"></td>
+              <td><input type="number" id="ddbeaterror" placeholder="ms" step='0.01' min="-20" max="20"></td>
+            </tr>
+            <tr>
+              <th>Dial&nbsp;Up&nbsp;</th>
+              <td><input type="number" id="durate" placeholder="sec/day" step='0.01' min="-1000" max="1000"></td>
+              <td><input type="number" id="duamplitude" placeholder="&deg;" min="1" max="360"></td>
+              <td><input type="number" id="dubeaterror" placeholder="ms" step='0.01' min="-20" max="20"></td>
+            </tr>
+            <tr>
+              <th title="Six Up">Crown&nbsp;Left&nbsp;</th>
+              <td><input type="number" id="clrate" placeholder="sec/day" step='0.01' min="-1000" max="1000"></td>
+              <td><input type="number" id="clamplitude" placeholder="&deg;" min="1" max="360"></td>
+              <td><input type="number" id="clbeaterror" placeholder="ms" step='0.01' min="-20" max="20"></td>
+            </tr>
+            <tr>
+              <th title="Nine Up">Crown&nbsp;Down&nbsp;</th>
+              <td><input type="number" id="cdrate" placeholder="sec/day" step='0.01' min="-1000" max="1000"></td>
+              <td><input type="number" id="cdamplitude" placeholder="&deg;" min="1" max="360"></td>
+              <td><input type="number" id="cdbeaterror" placeholder="ms" step='0.01' min="-20" max="20"></td>
+            </tr>
+            <tr id="crownuprow">
+              <th title="Three Up">Crown&nbsp;Up&nbsp;</th>
+              <td><input type="number" id="curate" placeholder="sec/day" step='0.01' min="-1000" max="1000"></td>
+              <td><input type="number" id="cuamplitude" placeholder="&deg;" min="1" max="360"></td>
+              <td><input type="number" id="cubeaterror" placeholder="ms" step='0.01' min="-20" max="20"></td>
+            </tr>
+          </table>
+        </div>  
+        <div class="responsiveblock">  
+          <table>
+            <tr>
+              <th style="width: 5.6rem">Delta</th>
+              <td><input disabled type="number" id="deltarate" step='0.01'></td>
+              <td><input disabled type="number" id="deltaamplitude"></td>
+              <td><input disabled type="number" id="deltabeaterror" step='0.01'></td>
+            </tr>
+            <tr id="deltahorizontalrow">
+              <th style="width: 5.6rem">- Horizontal</th>
+              <td><input disabled type="number" id="deltahorizontalrate" step='0.01'></td>
+              <td><input disabled type="number" id="deltahorizontalamplitude"></td>
+              <td><input disabled type="number" id="deltahorizontalbeaterror" step='0.01'></td>
+            </tr>
+            <tr>
+              <th style="width: 5.6rem">- Vertical</th>
+              <td><input disabled type="number" id="deltaverticalrate" step='0.01'></td>
+              <td><input disabled type="number" id="deltaverticalamplitude"></td>
+              <td><input disabled type="number" id="deltaverticalbeaterror" step='0.01'></td>
+            </tr>
+            <tr>
+              <th style="width: 5.6rem">Mean</th>
+              <td><input disabled type="number" id="meanrate" step='0.01'></td>
+              <td><input disabled type="number" id="meanamplitude"></td>
+              <td><input disabled type="number" id="meanbeaterror" step='0.01'></td>
+            </tr>
+          </table>
+        </div>  
+        <div class="responsiveblock" id="recommendations">  
+          Recommendations:
+          <div id="recommendationslines" style="width: 21rem; white-space: wrap;"></div>
+        </div>  
+        <div class="responsiveblock"> 
+          <div class="optionline"> 
+            <div class="option" title="Toggle color assist for values"> 
+              <label class="switch" for="optioncolorassist">
+                <input type="checkbox" id="optioncolorassist" checked>
+                <div class="slider round"></div>
+              </label>  
+              <div class="optiontext"> 
+                Color assist
+              </div>
+            </div>
+            <div class="option" id="optioncoloramplitudeoption" title="Target amplitude differs per caliber&#013;Amplitude color assist lacks specificity"> 
+              <label class="switch" for="optioncoloramplitude">
+                <input type="checkbox" id="optioncoloramplitude" checked>
+                <div class="slider round"></div>
+              </label>  
+              <div class="optiontext"> 
+                Color amplitude
+              </div>
+            </div>
+          </div>
+          <div class="optionline"> 
+            <div class="option" title="Toggle between five and three positions"> 
+              <label class="switch" for="optionpositions">
+                <input type="checkbox" id="optionpositions" checked>
+                <div class="slider round"></div>
+              </label>  
+              <div class="optiontext"> 
+                Five positions
+              </div>
+            </div>
+            <div class="option" title="Toggle recommendations"> 
+              <label class="switch" for="optionrecommendations">
+                <input type="checkbox" id="optionrecommendations" checked>
+                <div class="slider round"></div>
+              </label>  
+              <div class="optiontext"> 
+                Recommendations
+              </div>
+            </div>
+          </div>
+        </div>  
+      </div>
+    </div>
+    <div class="copyright">
+      &copy<a href="https://www.instagram.com/yeoldone/" target="_blank">YeOldOne</a>&nbsp;<span id="copyrightyears">2024</span>
+      <script>  
+        setCopyrightYears("copyrightyears", 2024);
+      </script>  
+    </div>
+    <script> 
+      addListeners();
+    </script> 
+  </body>
+</html>
